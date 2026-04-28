@@ -67,7 +67,8 @@ def create_pdf(rec):
     pdf.set_text_color(0, 0, 0)
     pdf.cell(0, 10, "電話：0917256229", ln=True)
     
-    return pdf.output()
+    # 🔴 關鍵修復：強制將 bytearray 轉換為 Streamlit 認得的 bytes 格式
+    return bytes(pdf.output())
 
 # --- 4. 主介面 ---
 st.title("🏗️ 鑫龍工程報表與保固系統")
@@ -129,9 +130,8 @@ if st.session_state.history:
     total_rev = edited_df["總價"].sum()
     st.info(f"💰 目前累積總金額：**NT$ {total_rev:,}** 元")
 
-    # Excel 下載邏輯優化
+    # Excel 下載邏輯
     towrite = io.BytesIO()
-    # 使用 xlsxwriter 讓表格更好看
     edited_df.to_excel(towrite, index=False, engine='openpyxl')
     
     st.download_button(
