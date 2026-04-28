@@ -4,141 +4,159 @@ from datetime import datetime
 from fpdf import FPDF
 import io
 import os
+import re
 
-# --- 1. 頁面配置 ---
-st.set_page_config(page_title="鑫龍工程行-報表系統", layout="centered")
+# --- 1. 頁面配置與主題設定 ---
+st.set_page_config(page_title="鑫龍工程管理系統", layout="centered", page_icon="🏗️")
 
 # --- 2. 初始化資料紀錄 ---
 if 'history' not in st.session_state:
     st.session_state.history = []
 
-# --- 3. 標題與基本資料 ---
-st.title("🏗️ 鑫龍工程行 - 報表系統")
+# --- 3. PDF 生成核心函數 ---
+def create_pdf(rec):
+    # FPDF 實例
+    pdf = FPDF(orientation='P', unit='mm', format='A4')
+    pdf.add_page()
+    
+    # 字體處理 (確保 font.ttf 放在同資料夾)
+    font_path = "font.ttf"
+    if os.path.exists(font_path):
+        pdf.add_font("CustomFont", "", font_path)
+        pdf.set_font("CustomFont", "", 12)
+    else:
+        pdf.set_font("helvetica", "", 12)
 
-with st.expander("📝 1. 輸入基本資料", expanded=True):
+    # --- 標題區 ---
+    pdf.set_font_size(30)
+    pdf.set_text_color(0, 51, 102) # 深藍色
+    pdf.cell(0, 30, "鑫龍工程行", ln=True, align='C')
+    
+    pdf.set_font_size(20)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(0, 15, "工程保固證明書", ln=True, align='C')
+    pdf.ln(10)
+
+    # --- 內容區 ---
+    pdf.set_font_size(15)
+    pdf.set_fill_color(245, 245, 245) # 淺灰色背景
+    
+    # 建立內容列
+    y_year = datetime.now().year - 1911
+    details = [
+        f"業主名稱：{rec['客戶']}",
+        f"施工地址：{rec['地址']}",
+        f"施工項目：{rec['項目']}工程",
+        f"保固期限：{rec['保固']} 年",
+        f"生效日期：民國 {y_year} 年 {datetime.now().month} 月 {datetime.now().day} 日"
+    ]
+    
+    for detail in details:
+        pdf.cell(0, 15, f"  {detail}", ln=True, border='B')
+        pdf.ln(2)
+
+    # --- 簽章區 (固定於右下方) ---
+    pdf.ln(30)
+    pdf.set_font_size(16)
+    pdf.set_x(120)
+    pdf.cell(0, 10, "承包商：鑫龍工程行", ln=True)
+    pdf.set_x(120)
+    pdf.set_text_color(200, 0, 0) # 紅色負責人
+    pdf.cell(0, 10, "負責人：劉建成 (簽章)", ln=True)
+    pdf.set_x(120)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(0, 10, "電話：0917256229", ln=True)
+    
+    return pdf.output()
+
+# --- 4. 主介面 ---
+st.title("🏗️ 鑫龍工程報表與保固系統")
+st.markdown("---")
+
+# 表單輸入區
+with st.form("input_form", clear_on_submit=True):
     col1, col2 = st.columns(2)
     with col1:
-        customer_name = st.text_input("客戶姓名")
-        contact_info = st.text_input("聯絡電話/LINE")
+        c_name = st.text_input("客戶姓名*", placeholder="例如：林小姐")
+        c_phone = st.text_input("聯絡電話*", placeholder="0912345678")
     with col2:
-        address = st.text_input("施工地址")
-        work_days = st.text_input("施工天數", value="3")
-    
-    warranty_years = st.number_input("保固年限 (年)", min_value=0, value=3)
+        addr = st.text_input("施工地址*", placeholder="新北市...")
+        w_years = st.number_input("保固年限 (年)", min_value=0, max_value=20, value=3)
 
-with st.expander("🛠️ 2. 施工細節", expanded=True):
-    area_options = {"頂樓天台": 3500, "浴室防水": 2800, "外牆滲漏": 2200, "壁癌處理": 2500, "油漆工程": 1200, "追加工程": 0}
-    area_type = st.selectbox("施工區域", list(area_options.keys()))
+    st.write("🔧 工程詳情")
+    ca, cb, cc = st.columns(3)
+    area_map = {"頂樓天台": 3500, "浴室防水": 2800, "外牆滲漏": 2200, "壁癌處理": 2500, "油漆工程": 1200, "追加項目": 0}
+    a_type = ca.selectbox("工程項目", list(area_map.keys()))
+    sqft = cb.number_input("坪數", min_value=0.0, step=0.1)
+    u_price = cc.number_input("單價 (NT$)", value=area_map[a_type], min_value=0)
     
-    c1, c2 = st.columns(2)
-    unit_price = c1.number_input("每坪單價 (NT$)", value=area_options[area_type])
-    sqft = c2.number_input("施工面積 (坪)", min_value=0.0, step=0.1)
+    submit = st.form_submit_button("🚀 儲存並生成紀錄")
+
+# --- 5. 防呆與存檔邏輯 ---
+if submit:
+    phone_valid = re.match(r'^[0-9-]{8,12}$', c_phone)
     
-    display_item = st.text_input("自定義項目名稱", value=area_type)
-
-total_amount = int(sqft * unit_price)
-st.subheader(f"💰 總金額：NT$ {total_amount:,} 元")
-
-# --- 4. 儲存邏輯 ---
-if st.button("✅ 生成報表並存檔", use_container_width=True):
-    if not customer_name:
-        st.error("請輸入客戶姓名")
+    if not c_name or not addr:
+        st.error("🚨 錯誤：姓名與地址為必填！")
+    elif not phone_valid:
+        st.error("🚨 錯誤：電話格式不正確，請輸入純數字！")
+    elif sqft <= 0:
+        st.warning("⚠️ 提醒：坪數必須大於 0 才能計算總價。")
     else:
-        new_record = {
-            "ID": datetime.now().strftime("%H%M%S"),
+        new_entry = {
             "日期": datetime.now().strftime("%Y/%m/%d"),
-            "客戶": customer_name,
-            "地址": address,
-            "項目": display_item,
+            "客戶": c_name,
+            "電話": c_phone,
+            "地址": addr,
+            "項目": a_type,
             "坪數": sqft,
-            "單價": unit_price,
-            "總價": total_amount,
-            "天數": work_days,
-            "保固": warranty_years
+            "單價": u_price,
+            "總價": int(sqft * u_price),
+            "保固": w_years
         }
-        st.session_state.history.append(new_record)
-        st.success(f"已儲存 {customer_name} 的紀錄")
+        st.session_state.history.append(new_entry)
+        st.success(f"✅ 已成功儲存 {c_name} 的紀錄！")
 
-st.divider()
-
-# --- 5. 月報管理 (修改與刪除) ---
-st.header("📊 工程紀錄管理")
+# --- 6. 紀錄管理 (Excel) ---
 if st.session_state.history:
-    # 轉成 DataFrame 讓使用者可以直接在網頁修改
-    df = pd.DataFrame(st.session_state.history)
-    edited_df = st.data_editor(df, num_rows="dynamic", key="editor")
+    st.markdown("---")
+    st.header("📊 工程紀錄清單")
     
-    total_revenue = edited_df["總價"].sum()
-    st.write(f"### 📈 本月合計營收：NT$ {total_revenue:,} 元")
+    df = pd.DataFrame(st.session_state.history)
+    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True)
+    
+    # 營收統計
+    total_rev = edited_df["總價"].sum()
+    st.info(f"💰 目前累積總金額：**NT$ {total_rev:,}** 元")
 
-    # Excel 匯出
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        # 建立 Excel 格式
-        output_df = edited_df.copy()
-        output_df.loc['合計'] = ['', '', '', '', '', '', '', output_df['總價'].sum(), '', '']
-        output_df.to_excel(writer, index=False, sheet_name='月報表')
+    # Excel 下載邏輯優化
+    towrite = io.BytesIO()
+    # 使用 xlsxwriter 讓表格更好看
+    edited_df.to_excel(towrite, index=False, engine='openpyxl')
     
     st.download_button(
         label="🟢 匯出 Excel 月報表",
-        data=buffer,
-        file_name=f"鑫龍工程_{datetime.now().strftime('%m')}月報.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        data=towrite.getvalue(),
+        file_name=f"鑫龍工程報表_{datetime.now().strftime('%m%d')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True
     )
 
-    # --- 6. PDF 保固書生成 (鑫龍規格) ---
-    def create_pdf(rec):
-        pdf = FPDF()
-        pdf.add_page()
-        
-        # 載入字體 (需確認 font.ttf 存在)
-        if os.path.exists("font.ttf"):
-            pdf.add_font("MSJH", "", "font.ttf")
-            pdf.set_font("MSJH", "", 12)
-        
-        # 標題
-        pdf.set_font_size(30)
-        pdf.cell(0, 20, "鑫龍工程行", ln=True, align='C')
-        pdf.set_font_size(20)
-        pdf.cell(0, 15, "工程保固證明書", ln=True, align='C')
-        pdf.set_font_size(12)
-        pdf.cell(0, 10, "茲因承攬下列工程，為確保客戶權益及維護施工品質，提供保固。", ln=True, align='C')
-        pdf.ln(10)
-        
-        # 民國換算
-        startY = datetime.now().year - 1911
-        endY = startY + int(rec['保固'])
-        
-        # 內容
-        pdf.set_font_size(16)
-        pdf.cell(0, 12, f"一、 業主名稱：{rec['客戶']}", ln=True)
-        pdf.cell(0, 12, f"二、 工程名稱：{rec['項目']}", ln=True)
-        pdf.cell(0, 12, f"三、 工程地點：{rec['地址']}", ln=True)
-        pdf.cell(0, 12, f"四、 承包內容：{rec['項目']}工程", ln=True)
-        pdf.cell(0, 12, f"五、 保固期間：民國 {startY} 年起至民國 {endY} 年止", ln=True)
-        
-        pdf.ln(20)
-        pdf.cell(0, 12, "承包商：鑫龍工程行", ln=True)
-        pdf.cell(0, 12, "負責人：劉建成", ln=True)
-        pdf.cell(0, 12, "電話：0917256229", ln=True)
-        
-        return pdf.output()
-
-# --- 6. PDF 保固書生成修正版 ---
-if st.button("🛡️ 點此生成保固書內容"):
-    if not edited_df.empty:
-        last_rec = edited_df.iloc[-1] # 抓最後一筆
-        pdf_bytes = create_pdf(last_rec)
-        
-        st.success(f"✅ {last_rec['客戶']} 的保固書已生成！")
-        
-        # 🔴 關鍵：把下載按鈕放在生成按鈕觸發後的邏輯裡
-        st.download_button(
-            label="📥 點我正式下載 PDF 檔案",
-            data=pdf_bytes,
-            file_name=f"{last_rec['客戶']}_保固書.pdf",
-            mime="application/pdf",
-            use_container_width=True
-        )
-    else:
-        st.error("目前沒有資料可以生成保固書")
+    # --- 7. PDF 下載 ---
+    st.subheader("📄 PDF 保固證明書")
+    if st.button("點此準備最後一筆 PDF 檔案"):
+        if not edited_df.empty:
+            last_item = edited_df.iloc[-1]
+            try:
+                pdf_bytes = create_pdf(last_item)
+                st.download_button(
+                    label=f"📥 下載 {last_item['客戶']} 的保固證明書",
+                    data=pdf_bytes,
+                    file_name=f"{last_item['客戶']}_保固書.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+            except Exception as e:
+                st.error(f"PDF 製作出錯：{e}")
+else:
+    st.info("💡 尚無紀錄，請先填寫上方表單。")
