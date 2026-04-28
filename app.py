@@ -7,7 +7,7 @@ import os
 import re
 
 # --- 1. 頁面配置與 CSS ---
-st.set_page_config(page_title="鑫龍工程行, layout="centered", page_icon="🏗️")
+st.set_page_config(page_title="鑫龍工程行", layout="centered", page_icon="🏗️")
 
 st.markdown("""
     <style>
