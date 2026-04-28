@@ -7,7 +7,7 @@ import os
 import re
 
 # --- 1. 頁面配置與 CSS ---
-st.set_page_config(page_title="鑫龍工程行", layout="centered", page_icon="🏗️")
+st.set_page_config(page_title="鑫龍工程行", layout="centered", page_icon="👷")
 
 st.markdown("""
     <style>
@@ -35,7 +35,7 @@ if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'history' not in st.session_state: st.session_state.history = []
 
 if not st.session_state.logged_in:
-    st.markdown("<br><h1 style='text-align: center;'>🏗️ 鑫龍工程內部系統</h1>", unsafe_allow_html=True)
+    st.markdown("<br><h1 style='text-align: center;'>🚧 鑫龍工程內部系統</h1>", unsafe_allow_html=True)
     with st.form("login_form"):
         u = st.text_input("帳號")
         p = st.text_input("密碼", type="password")
@@ -46,7 +46,7 @@ if not st.session_state.logged_in:
             else: st.error("密碼錯誤")
     st.stop()
 
-# --- 3. PDF 生成引擎 ---
+# --- 3. PDF 生成引擎 (負責人留空、去紅字) ---
 class ModernPDF(FPDF):
     def header(self):
         self.set_fill_color(30, 41, 59)
@@ -91,6 +91,7 @@ def create_pdf(rec):
     pdf.ln(25); pdf.set_x(110); pdf.set_font_size(14); pdf.set_text_color(30, 41, 59)
     pdf.cell(70, 10, "承 包 商：鑫龍工程行", ln=True)
     pdf.ln(2); pdf.set_x(110)
+    # 負責人留空供手寫或蓋章，且使用深色字體
     pdf.cell(70, 10, "負 責 人：________________ (簽章)", ln=True)
     pdf.ln(2); pdf.set_x(110)
     pdf.cell(70, 10, "電    話：0917256229", ln=True)
@@ -99,7 +100,7 @@ def create_pdf(rec):
 
 # --- 4. 主介面操作 ---
 st.sidebar.button("🚪 登出", on_click=lambda: st.session_state.update({"logged_in": False}))
-st.title("🚧 鑫龍工程操作面板")
+st.title("🚜 鑫龍工程操作面板")
 
 with st.form("main_form", clear_on_submit=True):
     st.subheader("📋 紀錄登錄")
@@ -125,17 +126,24 @@ if submit and name and addr:
     st.success("存檔成功")
 
 if st.session_state.history:
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.header("📊 歷史數據庫")
     df = pd.DataFrame(st.session_state.history)
-    st.metric("💰 累計金額", f"NT$ {df['總價'].sum():,}")
-    edited_df = st.data_editor(df, use_container_width=True, num_rows="dynamic")
     
+    m1, m2 = st.columns(2)
+    m1.metric("💰 累計預計營收", f"NT$ {df['總價'].sum():,}")
+    m2.metric("📝 案量統計", f"{len(df)} 件")
+    
+    edited_df = st.data_editor(df, use_container_width=True, num_rows="dynamic")
+
+    st.markdown("<br>", unsafe_allow_html=True)
     c_ex, c_pdf = st.columns(2)
     # Excel
     ex_buf = io.BytesIO()
-    edited_df.to_excel(ex_buf, index=False)
-    c_ex.download_button("📊 匯出 Excel", data=ex_buf.getvalue(), file_name="月報.xlsx", use_container_width=True)
+    edited_df.to_excel(ex_buf, index=False, engine='openpyxl')
+    c_ex.download_button("📊 匯出 Excel 報表", data=ex_buf.getvalue(), file_name="鑫龍月報.xlsx", use_container_width=True)
     
-    # PDF (移除按鈕上的括號文字)
+    # PDF (移除按鈕上的 (空白簽章版))
     last = edited_df.iloc[-1]
     pdf_out = create_pdf(last)
-    c_pdf.download_button(f"📄 下載 {last['客戶']} 保固書", data=pdf_out, file_name=f"{last['客戶']}_保固.pdf", use_container_width=True)
+    c_pdf.download_button(f"📄 下載 {last['客戶']} 保固書", data=pdf_out, file_name=f"{last['客戶']}_保固證明.pdf", use_container_width=True)
