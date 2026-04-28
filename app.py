@@ -6,20 +6,67 @@ import io
 import os
 import re
 
-# --- 1. 頁面配置與主題設定 ---
-st.set_page_config(page_title="鑫龍工程管理系統", layout="centered", page_icon="🏗️")
+# --- 1. 網頁現代化 CSS 美化 ---
+st.set_page_config(page_title="鑫龍工程維護系統", layout="centered", page_icon="🏗️")
 
-# --- 2. 初始化資料紀錄 ---
+st.markdown("""
+    <style>
+    /* 全域字體與背景 */
+    .main { background-color: #f8f9fa; }
+    
+    /* 標題美化 */
+    h1 { color: #003366; font-family: 'Microsoft JhengHei'; font-weight: 800; }
+    
+    /* 卡片式容器 */
+    div.stForm {
+        background-color: white;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border: none;
+    }
+    
+    /* 按鈕美化 */
+    .stButton>button {
+        width: 100%;
+        border-radius: 8px;
+        height: 3em;
+        background-color: #003366;
+        color: white;
+        font-weight: bold;
+        transition: 0.3s;
+    }
+    .stButton>button:hover {
+        background-color: #00509e;
+        border-color: #00509e;
+        transform: translateY(-2px);
+    }
+    
+    /* Metric 數值美化 */
+    [data-testid="stMetricValue"] { color: #003366; font-size: 1.8rem; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- 2. 初始化 Session ---
 if 'history' not in st.session_state:
     st.session_state.history = []
 
-# --- 3. PDF 生成核心函數 ---
+# --- 3. PDF 格式重塑 (解決跑版問題) ---
+class ModernPDF(FPDF):
+    def header(self):
+        # 頁首裝飾
+        self.set_fill_color(0, 51, 102)
+        self.rect(0, 0, 210, 15, 'F')
+    
+    def footer(self):
+        self.set_y(-15)
+        self.set_font("CustomFont", "", 9) if os.path.exists("font.ttf") else self.set_font("helvetica", "", 9)
+        self.cell(0, 10, "本證明書由 鑫龍工程管理系統 自動生成", align='C')
+
 def create_pdf(rec):
-    # FPDF 實例
-    pdf = FPDF(orientation='P', unit='mm', format='A4')
+    pdf = ModernPDF()
     pdf.add_page()
     
-    # 字體處理 (確保 font.ttf 放在同資料夾)
     font_path = "font.ttf"
     if os.path.exists(font_path):
         pdf.add_font("CustomFont", "", font_path)
@@ -27,136 +74,125 @@ def create_pdf(rec):
     else:
         pdf.set_font("helvetica", "", 12)
 
-    # --- 標題區 ---
-    pdf.set_font_size(30)
-    pdf.set_text_color(0, 51, 102) # 深藍色
-    pdf.cell(0, 30, "鑫龍工程行", ln=True, align='C')
-    
-    pdf.set_font_size(20)
-    pdf.set_text_color(0, 0, 0)
-    pdf.cell(0, 15, "工程保固證明書", ln=True, align='C')
+    # --- 頂部標題 ---
     pdf.ln(10)
-
-    # --- 內容區 ---
-    pdf.set_font_size(15)
-    pdf.set_fill_color(245, 245, 245) # 淺灰色背景
+    pdf.set_font_size(32)
+    pdf.set_text_color(0, 51, 102)
+    pdf.cell(0, 25, "鑫 龍 工 程 行", ln=True, align='C')
     
-    # 建立內容列
+    pdf.set_font_size(18)
+    pdf.set_text_color(50, 50, 50)
+    pdf.cell(0, 15, "工 程 保 固 證 明 書", ln=True, align='C')
+    pdf.ln(5)
+
+    # --- 質感表格區 (解決對齊跑版) ---
+    pdf.set_fill_color(245, 245, 245)
+    pdf.set_draw_color(200, 200, 200)
+    pdf.set_line_width(0.3)
+    
+    def add_table_row(label, value):
+        pdf.set_font_size(13)
+        pdf.set_x(25)
+        # 標題格 (固定寬度確保對齊)
+        pdf.cell(40, 15, f" {label}", border=1, fill=True)
+        # 內容格
+        pdf.cell(120, 15, f" {value}", border=1, ln=True)
+
     y_year = datetime.now().year - 1911
-    details = [
-        f"業主名稱：{rec['客戶']}",
-        f"施工地址：{rec['地址']}",
-        f"施工項目：{rec['項目']}工程",
-        f"保固期限：{rec['保固']} 年",
-        f"生效日期：民國 {y_year} 年 {datetime.now().month} 月 {datetime.now().day} 日"
-    ]
-    
-    for detail in details:
-        pdf.cell(0, 15, f"  {detail}", ln=True, border='B')
-        pdf.ln(2)
+    add_table_row("業主名稱", rec['客戶'])
+    add_table_row("施工地址", rec['地址'])
+    add_table_row("施工項目", f"{rec['項目']} 工程")
+    add_table_row("保固期限", f"自完工日起算 {rec['保固']} 年")
+    add_table_row("生效日期", f"民國 {y_year} 年 {datetime.now().month} 月 {datetime.now().day} 日")
 
-    # --- 簽章區 (固定於右下方) ---
-    pdf.ln(30)
-    pdf.set_font_size(16)
-    pdf.set_x(120)
-    pdf.cell(0, 10, "承包商：鑫龍工程行", ln=True)
-    pdf.set_x(120)
-    pdf.set_text_color(200, 0, 0) # 紅色負責人
-    pdf.cell(0, 10, "負責人：劉建成 (簽章)", ln=True)
-    pdf.set_x(120)
+    # --- 中間條款 ---
+    pdf.ln(10)
+    pdf.set_x(25)
+    pdf.set_font_size(10)
+    pdf.set_text_color(100, 100, 100)
+    pdf.multi_cell(160, 6, "備註：保固期間內若因施工品質導致之滲漏，本公司負責無償修復。若因人為破壞、天災、建物結構體龜裂、地震等不可抗力因素，則不在保固範圍內。", align='L')
+
+    # --- 簽章區 (右側對齊美化) ---
+    pdf.ln(25)
+    pdf.set_font_size(15)
     pdf.set_text_color(0, 0, 0)
-    pdf.cell(0, 10, "電話：0917256229", ln=True)
+    pdf.set_x(110)
+    pdf.cell(75, 10, "承 包 商：鑫龍工程行", ln=True)
+    pdf.set_x(110)
+    pdf.set_text_color(200, 0, 0)
+    pdf.cell(75, 10, "負 責 人：劉建成 (蓋章)", ln=True)
+    pdf.set_x(110)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(75, 10, "電    話：0917256229", ln=True)
     
-    # 🔴 關鍵修復：強制將 bytearray 轉換為 Streamlit 認得的 bytes 格式
     return bytes(pdf.output())
 
-# --- 4. 主介面 ---
-st.title("🏗️ 鑫龍工程報表與保固系統")
-st.markdown("---")
+# --- 4. 網頁介面設計 ---
+st.title("🏗️ 鑫龍工程管理系統")
+st.write("Professional Engineering Management System")
 
-# 表單輸入區
-with st.form("input_form", clear_on_submit=True):
-    col1, col2 = st.columns(2)
-    with col1:
-        c_name = st.text_input("客戶姓名*", placeholder="例如：林小姐")
-        c_phone = st.text_input("聯絡電話*", placeholder="0912345678")
-    with col2:
-        addr = st.text_input("施工地址*", placeholder="新北市...")
-        w_years = st.number_input("保固年限 (年)", min_value=0, max_value=20, value=3)
-
-    st.write("🔧 工程詳情")
+with st.form("modern_form"):
+    st.subheader("📋 建立新工程存檔")
+    c1, c2 = st.columns(2)
+    name = c1.text_input("客戶姓名*", placeholder="請輸入業主名稱")
+    phone = c2.text_input("聯絡電話*", placeholder="請輸入 10 位數號碼")
+    
+    address = st.text_input("施工地址*", placeholder="請輸入詳細地址")
+    
+    st.divider()
+    
     ca, cb, cc = st.columns(3)
-    area_map = {"頂樓天台": 3500, "浴室防水": 2800, "外牆滲漏": 2200, "壁癌處理": 2500, "油漆工程": 1200, "追加項目": 0}
-    a_type = ca.selectbox("工程項目", list(area_map.keys()))
-    sqft = cb.number_input("坪數", min_value=0.0, step=0.1)
-    u_price = cc.number_input("單價 (NT$)", value=area_map[a_type], min_value=0)
+    items = {"頂樓天台": 3500, "浴室防水": 2800, "外牆滲漏": 2200, "壁癌處理": 2500, "油漆工程": 1200, "追加項目": 0}
+    project_item = ca.selectbox("工程項目", list(items.keys()))
+    size = cb.number_input("坪數", min_value=0.0, step=0.1)
+    price = cc.number_input("單價 (NT$)", value=items[project_item])
     
-    submit = st.form_submit_button("🚀 儲存並生成紀錄")
+    warranty = st.slider("保固設定 (年)", 0, 10, 3)
+    
+    submit = st.form_submit_button("🚀 確認存檔並產生紀錄")
 
-# --- 5. 防呆與存檔邏輯 ---
+# --- 5. 存檔防呆 ---
 if submit:
-    phone_valid = re.match(r'^[0-9-]{8,12}$', c_phone)
-    
-    if not c_name or not addr:
-        st.error("🚨 錯誤：姓名與地址為必填！")
-    elif not phone_valid:
-        st.error("🚨 錯誤：電話格式不正確，請輸入純數字！")
-    elif sqft <= 0:
-        st.warning("⚠️ 提醒：坪數必須大於 0 才能計算總價。")
+    if not name or not address or not re.match(r'^[0-9-]{8,12}$', phone):
+        st.error("🚨 請正確填寫所有必填欄位 (姓名、地址、正確電話格式)！")
+    elif size <= 0:
+        st.warning("⚠️ 坪數必須大於 0 才能進行金額結算。")
     else:
-        new_entry = {
+        st.session_state.history.append({
             "日期": datetime.now().strftime("%Y/%m/%d"),
-            "客戶": c_name,
-            "電話": c_phone,
-            "地址": addr,
-            "項目": a_type,
-            "坪數": sqft,
-            "單價": u_price,
-            "總價": int(sqft * u_price),
-            "保固": w_years
-        }
-        st.session_state.history.append(new_entry)
-        st.success(f"✅ 已成功儲存 {c_name} 的紀錄！")
+            "客戶": name, "電話": phone, "地址": address,
+            "項目": project_item, "坪數": size, "單價": price,
+            "總價": int(size * price), "保固": warranty
+        })
+        st.success(f"✅ 已成功存檔！業主 {name} 的資料已紀錄。")
 
-# --- 6. 紀錄管理 (Excel) ---
+# --- 6. 紀錄展示區 ---
 if st.session_state.history:
-    st.markdown("---")
-    st.header("📊 工程紀錄清單")
-    
+    st.divider()
+    st.header("📊 本月紀錄管理")
     df = pd.DataFrame(st.session_state.history)
-    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True)
     
-    # 營收統計
-    total_rev = edited_df["總價"].sum()
-    st.info(f"💰 目前累積總金額：**NT$ {total_rev:,}** 元")
-
-    # Excel 下載邏輯
+    # 營收看版
+    col_metric, col_excel = st.columns([2, 1])
+    col_metric.metric("本月累計營收", f"NT$ {df['總價'].sum():,} 元")
+    
+    # Excel 下載
     towrite = io.BytesIO()
-    edited_df.to_excel(towrite, index=False, engine='openpyxl')
-    
-    st.download_button(
-        label="🟢 匯出 Excel 月報表",
-        data=towrite.getvalue(),
-        file_name=f"鑫龍工程報表_{datetime.now().strftime('%m%d')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
-    )
+    df.to_excel(towrite, index=False, engine='openpyxl')
+    col_excel.download_button("🟢 匯出 Excel", data=towrite.getvalue(), file_name="鑫龍月報.xlsx", use_container_width=True)
+
+    # 數據編輯器
+    st.data_editor(df, use_container_width=True, num_rows="dynamic")
 
     # --- 7. PDF 下載 ---
-    st.subheader("📄 PDF 保固證明書")
-    if st.button("點此準備最後一筆 PDF 檔案"):
-        if not edited_df.empty:
-            last_item = edited_df.iloc[-1]
-            try:
-                pdf_bytes = create_pdf(last_item)
-                st.download_button(
-                    label=f"📥 下載 {last_item['客戶']} 的保固證明書",
-                    data=pdf_bytes,
-                    file_name=f"{last_item['客戶']}_保固書.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-            except Exception as e:
-                st.error(f"PDF 製作出錯：{e}")
+    st.subheader("📄 PDF 保固證明書生成")
+    if st.button("準備最後一筆資料之 PDF"):
+        pdf_bytes = create_pdf(st.session_state.history[-1])
+        st.download_button(
+            label=f"📥 點此下載 {st.session_state.history[-1]['客戶']} 的保固證明書",
+            data=pdf_bytes,
+            file_name=f"{st.session_state.history[-1]['客戶']}_保固書.pdf",
+            mime="application/pdf"
+        )
 else:
-    st.info("💡 尚無紀錄，請先填寫上方表單。")
+    st.info("💡 目前尚無紀錄，請於上方輸入資料並提交。")
