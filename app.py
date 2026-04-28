@@ -6,67 +6,82 @@ import io
 import os
 import re
 
-# --- 1. 專業 UI/UX 樣式注入 (SaaS 旗艦風格) ---
-st.set_page_config(page_title="鑫龍工程維護系統", layout="wide", page_icon="🏗️")
+# --- 1. 精品級 UI/UX 樣式注入 ---
+st.set_page_config(page_title="鑫龍工程行", layout="centered", page_icon="🏗️")
 
 st.markdown("""
     <style>
-    /* 全域字體與背景 - 採用現代 Slate 灰色系 */
-    .stApp { background-color: #F1F5F9; font-family: 'Inter', 'Noto Sans TC', sans-serif; }
-    
-    /* 隱藏預設元件提升沉浸感 */
+    /* 隱藏 Streamlit 預設雜項 */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    /* 頂部導航欄裝飾 */
-    .nav-bar { background-color: #1E293B; height: 5px; width: 100%; position: fixed; top: 0; left: 0; z-index: 999; }
+    /* 全域背景色：高雅燕麥奶灰白 */
+    .stApp { background-color: #F5F5F0; font-family: 'Helvetica Neue', Arial, 'Noto Sans TC', sans-serif; }
 
-    /* 卡片容器設計 - 增加柔和陰影與邊框 */
-    .stTabs [data-baseweb="tab-list"] { gap: 24px; background-color: transparent; }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: transparent;
-        border-radius: 8px;
-        color: #64748B;
-        font-weight: 600;
-    }
-    .stTabs [aria-selected="true"] { background-color: #FFFFFF !important; color: #0F172A !important; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    /* 標題與文字顏色：深石板灰 */
+    h1, h2, h3, p, span { color: #2C3539; }
 
-    /* 專業按鈕樣式 */
-    .stButton > button {
-        border-radius: 10px;
-        background-color: #2563EB;
-        color: white;
+    /* 表單卡片美化：純白背景、柔和陰影、頂部古銅金飾條 */
+    div[data-testid="stForm"] {
+        background-color: #FFFFFF;
+        padding: 2.5rem;
+        border-radius: 12px;
         border: none;
-        padding: 0.75rem 1.5rem;
-        font-weight: 600;
-        box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
-        transition: all 0.2s ease;
+        border-top: 5px solid #C19A6B; /* 香檳古銅金 */
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
     }
-    .stButton > button:hover { transform: translateY(-1px); box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3); background-color: #1D4ED8; }
 
-    /* 數據表格美化 */
-    div[data-testid="stDataFrame"] { border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden; }
+    /* 輸入框視覺優化 */
+    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>select {
+        border-radius: 6px;
+        border: 1px solid #E0E0E0;
+        background-color: #FAFAFA;
+        padding: 0.6rem;
+    }
+    .stTextInput>div>div>input:focus, .stNumberInput>div>div>input:focus {
+        border-color: #C19A6B;
+        box-shadow: 0 0 0 1px #C19A6B;
+    }
+
+    /* 精品按鈕設計 */
+    div.stButton > button {
+        background-color: #2C3539; /* 深石板灰 */
+        color: #FFFFFF;
+        border-radius: 6px;
+        border: none;
+        padding: 0.6rem 2rem;
+        font-weight: 500;
+        letter-spacing: 1px;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+    div.stButton > button:hover {
+        background-color: #C19A6B; /* 懸停變成香檳金 */
+        color: #FFFFFF;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(193, 154, 107, 0.3);
+    }
+
+    /* 數據表格外框圓角 */
+    div[data-testid="stDataFrame"] { border-radius: 10px; overflow: hidden; border: 1px solid #EAEAEA; }
     </style>
-    <div class="nav-bar"></div>
     """, unsafe_allow_html=True)
 
 # --- 2. 初始化 Session State ---
 if 'history' not in st.session_state:
     st.session_state.history = []
 
-# --- 3. PDF 格式核心 (已修正 bytes 轉檔) ---
+# --- 3. PDF 格式核心 (完美對齊版) ---
 class ModernPDF(FPDF):
     def header(self):
-        self.set_fill_color(30, 41, 59)
+        self.set_fill_color(44, 53, 57) # 深石板灰
         self.rect(0, 0, 210, 10, 'F')
     def footer(self):
         self.set_y(-15)
         self.set_font("CustomFont", "", 9) if os.path.exists("font.ttf") else self.set_font("helvetica", "", 9)
-        self.set_text_color(148, 163, 184)
-        self.cell(0, 10, "Xin-Long Engineering Management System - Official Document", align='C')
+        self.set_text_color(180, 180, 180)
+        self.cell(0, 10, "本證明書由 鑫龍工程自動生成", align='C')
 
 def create_pdf(rec):
     pdf = ModernPDF()
@@ -77,18 +92,18 @@ def create_pdf(rec):
     else:
         pdf.set_font("helvetica", "", 12)
 
-    pdf.ln(10)
-    pdf.set_font_size(28); pdf.set_text_color(30, 41, 59)
+    pdf.ln(12)
+    pdf.set_font_size(30); pdf.set_text_color(44, 53, 57)
     pdf.cell(0, 20, "鑫 龍 工 程 行", ln=True, align='C')
-    pdf.set_font_size(16); pdf.set_text_color(71, 85, 105)
+    pdf.set_font_size(16); pdf.set_text_color(120, 120, 120)
     pdf.cell(0, 10, "工 程 保 固 證 明 書", ln=True, align='C')
     
-    pdf.ln(10)
-    pdf.set_fill_color(248, 250, 252); pdf.set_draw_color(226, 232, 240)
+    pdf.ln(12)
+    pdf.set_fill_color(249, 249, 246); pdf.set_draw_color(210, 210, 210)
     def add_row(label, value):
-        pdf.set_x(30); pdf.set_text_color(100, 116, 139)
+        pdf.set_x(30); pdf.set_text_color(100, 100, 100)
         pdf.cell(40, 14, f" {label}", border=1, fill=True)
-        pdf.set_text_color(30, 41, 59)
+        pdf.set_text_color(44, 53, 57)
         pdf.cell(110, 14, f" {value}", border=1, ln=True)
 
     y_year = datetime.now().year - 1911
@@ -98,87 +113,84 @@ def create_pdf(rec):
     add_row("保固年限", f"完工日起算 {rec['保固']} 年")
     add_row("生效日期", f"民國 {y_year} 年 {datetime.now().month} 月 {datetime.now().day} 日")
 
-    pdf.ln(25); pdf.set_x(120); pdf.set_font_size(14)
+    pdf.ln(8); pdf.set_x(30); pdf.set_font_size(9); pdf.set_text_color(130, 130, 130)
+    pdf.multi_cell(150, 6, "備註：保固期間內若因本公司施工導致之異常，由本公司負責無償修復。若因人為破壞、天災或建物結構本身等不可抗力因素，則不在保固範圍內。", align='L')
+
+    pdf.ln(20); pdf.set_x(120); pdf.set_font_size(14); pdf.set_text_color(44, 53, 57)
     pdf.cell(60, 8, "承 包 商：鑫龍工程行", ln=True)
-    pdf.set_x(120); pdf.set_text_color(220, 38, 38)
+    pdf.set_x(120); pdf.set_text_color(193, 154, 107) # 古銅金
     pdf.cell(60, 8, "負 責 人：劉建成 (蓋章)", ln=True)
-    pdf.set_x(120); pdf.set_text_color(30, 41, 59)
-    pdf.cell(60, 8, "電    話：0917256229", ln=True)
+    pdf.set_x(120); pdf.set_text_color(44, 53, 57)
+    pdf.cell(60, 8, "連絡電話：0917256229", ln=True)
     
     return bytes(pdf.output())
 
-# --- 4. 系統導航分頁 ---
-st.title("🏗️ 鑫龍工程維護系統")
-tab1, tab2, tab3 = st.tabs(["📋 新增工程紀錄", "📊 數據中心", "💡 營運概況"])
+# --- 4. 一頁式流暢介面 ---
+st.markdown("<h1 style='text-align: center; font-size: 2.5rem; margin-top: 1rem;'>鑫龍工程行</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #888; font-size: 1rem; margin-bottom: 2rem;'>防水工程專用紀錄與保固系統</p>", unsafe_allow_html=True)
 
-# --- TAB 1: 新增紀錄 ---
-with tab1:
-    with st.form("pro_form"):
-        st.markdown("### 📝 工程明細登錄")
-        c1, c2 = st.columns(2)
-        name = c1.text_input("業主名稱*", placeholder="張小姐")
-        phone = c2.text_input("聯絡電話*", placeholder="0912-345-678")
-        addr = st.text_input("施工地址*", placeholder="請輸入完整施工地址")
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        col_a, col_b, col_c = st.columns(3)
-        items = {"頂樓天台": 3500, "浴室防水": 2800, "外牆滲漏": 2200, "壁癌處理": 2500, "油漆工程": 1200, "追加項目": 0}
-        p_item = col_a.selectbox("工程項目", list(items.keys()))
-        p_size = col_b.number_input("坪數", min_value=0.0, step=0.1)
-        p_price = col_c.number_input("單價 (NT$)", value=items[p_item])
-        
-        w_years = st.slider("保固期限 (年)", 0, 10, 3)
-        submit = st.form_submit_button("🚀 確認並存檔")
+# 填寫區塊 (卡片設計)
+with st.form("clean_form", clear_on_submit=True):
+    st.markdown("<h3 style='margin-bottom: 1rem;'>建立新紀錄</h3>", unsafe_allow_html=True)
+    
+    c1, c2 = st.columns(2)
+    name = c1.text_input("客戶姓名", placeholder="例如：張先生")
+    phone = c2.text_input("聯絡電話", placeholder="例如：0912345678")
+    address = st.text_input("施工地址", placeholder="請填寫完整地址")
+    
+    st.markdown("<hr style='border-color: #EEE; margin: 1.5rem 0;'>", unsafe_allow_html=True)
+    
+    ca, cb, cc = st.columns(3)
+    items = {"頂樓天台": 3500, "浴室防水": 2800, "外牆滲漏": 2200, "壁癌處理": 2500, "油漆工程": 1200, "追加項目": 0}
+    p_item = ca.selectbox("工程項目", list(items.keys()))
+    p_size = cb.number_input("施作坪數", min_value=0.0, step=0.1)
+    p_price = cc.number_input("單價 (NT$)", value=items[p_item])
+    
+    warranty = st.slider("保固期限 (年)", 0, 10, 3)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    submit = st.form_submit_button("＋ 儲存並建立檔案")
 
-    if submit:
-        if not name or not addr or not re.match(r'^[0-9-]{8,12}$', phone):
-            st.error("🚨 請檢查必填欄位或電話格式！")
-        else:
-            st.session_state.history.append({
-                "ID": datetime.now().strftime("%y%m%d%H%M"),
-                "日期": datetime.now().strftime("%Y/%m/%d"),
-                "客戶": name, "電話": phone, "地址": addr,
-                "項目": p_item, "坪數": p_size, "單價": p_price,
-                "總價": int(p_size * p_price), "保固": w_years
-            })
-            st.toast("✅ 紀錄已成功存檔", icon='🎉')
-
-# --- TAB 2: 數據中心 ---
-with tab2:
-    if st.session_state.history:
-        df = pd.DataFrame(st.session_state.history)
-        
-        # 快捷指標
-        m1, m2, m3 = st.columns(3)
-        m1.metric("本月總案量", f"{len(df)} 件")
-        m2.metric("累計預計營收", f"NT$ {df['總價'].sum():,}")
-        m3.metric("平均客單價", f"NT$ {int(df['總價'].mean()):,}")
-
-        st.markdown("### 📊 歷史紀錄編輯器")
-        edited_df = st.data_editor(df, use_container_width=True, num_rows="dynamic", key="main_editor")
-        
-        c_ex, c_pdf = st.columns(2)
-        # Excel 匯出
-        excel_buffer = io.BytesIO()
-        edited_df.to_excel(excel_buffer, index=False, engine='openpyxl')
-        c_ex.download_button("🟢 匯出 Excel 完整報表", data=excel_buffer.getvalue(), file_name="鑫龍工程月報.xlsx", use_container_width=True)
-
-        # PDF 保固書
-        if c_pdf.button("📄 準備最後一筆 PDF 保固書", use_container_width=True):
-            pdf_out = create_pdf(edited_df.iloc[-1])
-            st.download_button(f"📥 下載 {edited_df.iloc[-1]['客戶']} 的證明書", data=pdf_out, file_name=f"{edited_df.iloc[-1]['客戶']}_保固書.pdf", use_container_width=True)
+# 防呆邏輯
+if submit:
+    if not name or not address or not re.match(r'^[0-9-]{8,12}$', phone):
+        st.error("🚨 請確認姓名、地址與電話格式正確。")
+    elif p_size <= 0:
+        st.warning("⚠️ 坪數必須大於 0。")
     else:
-        st.info("💡 目前尚無紀錄，請先至「新增工程紀錄」分頁輸入資料。")
+        st.session_state.history.append({
+            "日期": datetime.now().strftime("%Y/%m/%d"),
+            "客戶": name, "電話": phone, "地址": address,
+            "項目": p_item, "坪數": p_size, "單價": p_price,
+            "總價": int(p_size * p_price), "保固": warranty
+        })
+        st.success(f"✨ 業主 {name} 的資料已成功存檔。")
 
-# --- TAB 3: 營運概況 (視覺化分析) ---
-with tab3:
-    if st.session_state.history:
-        st.markdown("### 💡 工程分佈分析")
-        df_chart = pd.DataFrame(st.session_state.history)
-        item_counts = df_chart.groupby('項目')['總價'].sum().reset_index()
-        
-        # 使用 Streamlit 內建圖表展示專業感
-        st.bar_chart(item_counts.set_index('項目'))
-        st.caption("工程項目營收佔比分析")
-    else:
-        st.info("數據累積後，這裡會顯示營運分析圖表。")
+# --- 5. 管理區塊 (一頁式往下滑) ---
+if st.session_state.history:
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<h3>📂 工程紀錄一覽</h3>", unsafe_allow_html=True)
+    
+    df = pd.DataFrame(st.session_state.history)
+    
+    # 簡約數據看板
+    col_rev, col_count = st.columns(2)
+    col_rev.metric("本月累積營收", f"NT$ {df['總價'].sum():,}")
+    col_count.metric("已完成案件數", f"{len(df)} 件")
+    
+    # 表格
+    edited_df = st.data_editor(df, use_container_width=True, num_rows="dynamic")
+
+    # 輸出區塊 (並排按鈕，簡潔有力)
+    st.markdown("<br>", unsafe_allow_html=True)
+    c_btn1, c_btn2 = st.columns(2)
+    
+    # Excel
+    excel_buffer = io.BytesIO()
+    edited_df.to_excel(excel_buffer, index=False, engine='openpyxl')
+    c_btn1.download_button("📊 匯出 Excel 總表", data=excel_buffer.getvalue(), file_name="鑫龍月報.xlsx", use_container_width=True)
+    
+    # PDF
+    last_record = edited_df.iloc[-1]
+    pdf_out = create_pdf(last_record)
+    c_btn2.download_button(f"📄 下載 {last_record['客戶']} 的保固書", data=pdf_out, file_name=f"{last_record['客戶']}_保固書.pdf", use_container_width=True)
