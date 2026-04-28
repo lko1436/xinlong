@@ -124,12 +124,21 @@ if st.session_state.history:
         
         return pdf.output()
 
-    if st.button("🛡️ 生成最後一筆資料的 PDF 保固書"):
-        last_rec = edited_df.iloc[-1]
+# --- 6. PDF 保固書生成修正版 ---
+if st.button("🛡️ 點此生成保固書內容"):
+    if not edited_df.empty:
+        last_rec = edited_df.iloc[-1] # 抓最後一筆
         pdf_bytes = create_pdf(last_rec)
+        
+        st.success(f"✅ {last_rec['客戶']} 的保固書已生成！")
+        
+        # 🔴 關鍵：把下載按鈕放在生成按鈕觸發後的邏輯裡
         st.download_button(
-            label="📥 下載保固證明書.pdf",
+            label="📥 點我正式下載 PDF 檔案",
             data=pdf_bytes,
             file_name=f"{last_rec['客戶']}_保固書.pdf",
-            mime="application/pdf"
+            mime="application/pdf",
+            use_container_width=True
         )
+    else:
+        st.error("目前沒有資料可以生成保固書")
